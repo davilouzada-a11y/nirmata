@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    container_name: radiografia_db
+    environment:
+      POSTGRES_DB: radiografia
+      POSTGRES_USER: radiografia_user
+      POSTGRES_PASSWORD: radiografia_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radiografia_user -d radiografia"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: radiografia_backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://radiografia_user:radiografia_pass@db:5432/radiografia
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      STORAGE_DIR: /data/storage
+      ML_BACKEND: ${ML_BACKEND:-mock}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-radiologista@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-changeme123}
+    volumes:
+      - storage:/data/storage
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    container_name: radiografia_frontend
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  storage:

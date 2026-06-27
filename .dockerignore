@@ -1,0 +1,12 @@
+# Keep the backend image lean — the build context is the project root.
+frontend/
+**/node_modules/
+**/.next/
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/storage/
+**/*.db
+ml/**/checkpoints/
+ml/data/
+.git/

@@ -1,0 +1,36 @@
+# Training configuration for the chest X-ray multi-label classifier.
+data:
+  images_dir: ./data/images
+  labels_csv: ./data/labels.csv          # image_id,patient_id,view,split,<finding columns...>
+  image_size: 224
+
+model:
+  backbone: densenet121                   # densenet121 | resnet50
+  pretrained: true
+  num_classes: 5
+
+findings:                                 # column order must match labels.csv
+  - normal_no_critical_finding
+  - pneumothorax
+  - pleural_effusion
+  - consolidation
+  - cardiomegaly
+
+train:
+  epochs: 20
+  batch_size: 32
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  num_workers: 4
+  device: cuda                            # falls back to cpu automatically
+  checkpoint_dir: ./checkpoints
+  model_version: cxr-densenet-v0.1.0
+
+# Per-class decision thresholds. Calibrated on the validation split after
+# training; copied into the backend ModelVersion.threshold_config.
+thresholds:
+  normal_no_critical_finding: 0.50
+  pneumothorax: 0.45
+  pleural_effusion: 0.62
+  consolidation: 0.55
+  cardiomegaly: 0.60

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.db
+storage/
+backend/storage/
+backend/radiografia.db
+
+# Node / Next
+node_modules/
+.next/
+next-env.d.ts
+
+# ML
+ml/**/checkpoints/
+ml/data/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
