@@ -8,6 +8,9 @@ in the project brief.
 > ⚠️ **Não é um dispositivo diagnóstico.** A IA é apoio à decisão; o laudo final é
 > sempre de responsabilidade do médico. Uso assistencial real exige validação
 > clínica e regularização (Anvisa) e segue a governança da CFM 2.454/2026.
+>
+> **Read first:** [`MODEL_CARD.md`](MODEL_CARD.md) — what was validated, the
+> limits, and [when NOT to use it](MODEL_CARD.md#when-not-to-use).
 
 ## Architecture
 
@@ -195,6 +198,10 @@ The frontier is shallow and the variance huge (only 17 normals). Honest takeaway
 thresholds; specificity needs *more/cleaner normal data + local recalibration*
 (and possibly a stronger model), not a threshold tweak. The calibration harness
 is ready to run on a proper local dataset.
+
+**Packaged summary:** [`MODEL_CARD.md`](MODEL_CARD.md) and the consolidated
+[validation summary](ml/validation/reports/VALIDATION_SUMMARY.md) state plainly
+what was validated, what wasn't, and when not to use this.
 
 ⚠️ **Not a certified/external validation:** the pretrained weights overlap the
 public training data (optimistic), normals are few (wide CIs), and labels are a
