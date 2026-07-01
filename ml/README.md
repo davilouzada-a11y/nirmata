@@ -18,10 +18,24 @@ ml/
 │   ├── train.py        # DenseNet-121, weighted BCE, AdamW+cosine, best-AUROC ckpt
 │   └── evaluate.py     # per-class AUROC/AUPRC/sensitivity/specificity/F1/FNR
 └── inference/
-    ├── preprocess.py   # PNG/JPG/DICOM → normalized tensor
-    ├── gradcam.py      # Grad-CAM heatmaps (explainability)
-    └── predictor.py    # checkpoint → findings + heatmaps (used by the API)
+    ├── preprocess.py     # PNG/JPG/DICOM → normalized tensor
+    ├── gradcam.py        # Grad-CAM heatmaps (explainability)
+    ├── predictor.py      # our own checkpoint → findings + heatmaps
+    └── xrv_predictor.py  # TorchXRayVision pretrained model (ML_BACKEND=xrv) — real CXR reading
 ```
+
+## Read real X-rays now (no training)
+
+`ML_BACKEND=xrv` uses [TorchXRayVision](https://github.com/mlmed/torchxrayvision)
+DenseNet-121 pretrained on ~1M chest radiographs — genuine probabilities for
+pneumothorax / effusion / consolidation / cardiomegaly, on CPU, no training:
+
+```bash
+pip install torch torchvision torchxrayvision
+ML_BACKEND=xrv uvicorn app.main:app --reload   # from backend/
+```
+
+Still advisory (domain shift, not locally calibrated) — human review stays.
 
 ## Train
 

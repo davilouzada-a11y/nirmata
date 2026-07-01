@@ -88,6 +88,8 @@ class InferenceService:
         thresholds = thresholds or DEFAULT_THRESHOLDS
         started = time.perf_counter()
 
+        if self.backend == "xrv":
+            return self._run_xrv(image_path, thresholds, heatmap_dir, study_id, started)
         if self.backend == "torch":
             return self._run_torch(image_path, thresholds, heatmap_dir, study_id, started)
         return self._run_mock(image_path, thresholds, heatmap_dir, study_id, started)
@@ -143,4 +145,21 @@ class InferenceService:
         result["overall_status"] = _overall_status(positives)
         result["inference_time_ms"] = int((time.perf_counter() - started) * 1000)
         result["model_version"] = settings.model_version_name
+        return result
+
+    # -- xrv (TorchXRayVision pretrained — real chest X-ray reading) ---------
+    def _run_xrv(self, image_path, thresholds, heatmap_dir, study_id, started):
+        from app.ml_bridge import ensure_ml_importable
+
+        ensure_ml_importable()
+        from ml.inference.xrv_predictor import get_xrv_predictor
+
+        predictor = get_xrv_predictor(settings.xrv_weights)
+        result = predictor.predict(
+            image_path, thresholds=thresholds,
+            heatmap_dir=os.path.join(heatmap_dir, study_id) if heatmap_dir else None,
+        )
+        positives = [f["finding_code"] for f in result["findings"] if f["is_positive"]]
+        result["overall_status"] = _overall_status(positives)
+        result["inference_time_ms"] = int((time.perf_counter() - started) * 1000)
         return result

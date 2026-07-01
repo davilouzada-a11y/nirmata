@@ -1,5 +1,6 @@
 torch>=2.2
 torchvision>=0.17
+torchxrayvision>=1.2   # pretrained chest X-ray models (ML_BACKEND=xrv)
 monai>=1.3        # medical-imaging transforms / augmentation
 numpy>=1.26
 pillow>=10.0

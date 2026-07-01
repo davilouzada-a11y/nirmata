@@ -25,6 +25,17 @@ DEFAULT_THRESHOLDS = {
     "cardiomegaly": 0.60,
 }
 
+# Thresholds for the TorchXRayVision pretrained model (ML_BACKEND=xrv). Its
+# sigmoid outputs aren't locally calibrated, so we use conservative operating
+# points with a lower bar for the critical finding (higher sensitivity).
+XRV_DEFAULT_THRESHOLDS = {
+    "normal_no_critical_finding": 0.50,
+    "pneumothorax": 0.40,
+    "pleural_effusion": 0.50,
+    "consolidation": 0.50,
+    "cardiomegaly": 0.50,
+}
+
 # Study lifecycle states. Transitions are enforced in study_service.
 STUDY_STATES = [
     "uploaded",

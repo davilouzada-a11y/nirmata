@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.constants import (
     CRITICAL_FINDINGS,
     DEFAULT_THRESHOLDS,
+    XRV_DEFAULT_THRESHOLDS,
     OVERALL_ABNORMAL_CRITICAL,
 )
 from app.core.config import get_settings
@@ -53,15 +54,33 @@ def _deidentify_dicom(content: bytes):
     return res.dicom_bytes, res.deident, res.width, res.height
 
 
+def _active_model_spec() -> dict:
+    """The model version + thresholds implied by the configured ML backend."""
+    if settings.ml_backend == "xrv":
+        return {
+            "name": "Chest X-ray classifier (TorchXRayVision DenseNet-121)",
+            "version": f"cxr-torchxrayvision-{settings.xrv_weights}",
+            "training_dataset": "NIH, CheXpert, MIMIC-CXR, PadChest, Google, OpenI, Kaggle (pretrained)",
+            "thresholds": XRV_DEFAULT_THRESHOLDS,
+        }
+    return {
+        "name": "Chest X-ray multi-label classifier",
+        "version": settings.model_version_name,
+        "training_dataset": "NIH ChestX-ray14 + local review (MVP)",
+        "thresholds": DEFAULT_THRESHOLDS,
+    }
+
+
 def get_or_create_model_version(db: Session) -> ModelVersion:
-    mv = db.query(ModelVersion).filter_by(version=settings.model_version_name).first()
+    spec = _active_model_spec()
+    mv = db.query(ModelVersion).filter_by(version=spec["version"]).first()
     if mv:
         return mv
     mv = ModelVersion(
-        name="Chest X-ray multi-label classifier",
-        version=settings.model_version_name,
-        training_dataset="NIH ChestX-ray14 + local review (MVP)",
-        threshold_config=DEFAULT_THRESHOLDS,
+        name=spec["name"],
+        version=spec["version"],
+        training_dataset=spec["training_dataset"],
+        threshold_config=spec["thresholds"],
     )
     db.add(mv)
     db.flush()

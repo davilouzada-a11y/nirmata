@@ -25,10 +25,16 @@ class Settings(BaseSettings):
     # in production; the same salt yields stable pseudonyms across uploads.
     deident_salt: str = "change-me-deident-salt"
 
-    # Inference backend: "mock" (deterministic, no torch) or "torch".
+    # Inference backend:
+    #   "mock"  — deterministic, no ML deps (default)
+    #   "xrv"   — TorchXRayVision pretrained DenseNet (real chest X-ray reading)
+    #   "torch" — our own trained checkpoint (see ml/training)
     ml_backend: str = "mock"
     model_checkpoint: str = "./ml/inference/checkpoints/cxr-densenet-v0.1.0.pt"
     model_version_name: str = "cxr-densenet-v0.1.0"
+
+    # TorchXRayVision weights id (used when ML_BACKEND=xrv).
+    xrv_weights: str = "densenet121-res224-all"
 
     # First-run seed user (a radiologist who can review studies).
     seed_admin_email: str = "radiologista@example.com"

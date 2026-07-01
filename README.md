@@ -63,9 +63,22 @@ chest-X-ray-like images in mixed workflow states (uploaded / predicted /
 finalized) so the UI is immediately clickable. Use `python -m app.seed` instead
 if you want an empty database with just the seed user + model version.
 
-The default `ML_BACKEND=mock` runs the entire clinical workflow with **no ML
-dependencies** — deterministic probabilities + generated heatmaps. Switch to the
-real model with `ML_BACKEND=torch` and a trained checkpoint (see `ml/README.md`).
+### Inference backends (`ML_BACKEND`)
+
+| Value | What it is | Deps |
+| --- | --- | --- |
+| `mock` (default) | Deterministic pseudo-probabilities + generated heatmaps. Runs the whole clinical workflow with **no ML deps** — for developing the app itself. | none |
+| `xrv` | **Reads the X-ray for real**: TorchXRayVision DenseNet-121 pretrained on ~1M chest radiographs (NIH, CheXpert, MIMIC-CXR, PadChest, …). Genuine probabilities for pneumothorax / effusion / consolidation / cardiomegaly. CPU-capable, no training. | `torch`, `torchxrayvision` |
+| `torch` | Our own checkpoint trained via `ml/training`. | `torch` + a checkpoint |
+
+```bash
+# Read real chest X-rays with a pretrained model:
+pip install torch torchvision torchxrayvision
+ML_BACKEND=xrv uvicorn app.main:app --reload
+```
+
+> ⚠️ Even `xrv` is **advisory, not a certified diagnosis** — pretrained weights
+> carry domain shift and aren't locally calibrated; mandatory human review stays.
 
 ## Clinical workflow (enforced by the backend)
 
