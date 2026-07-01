@@ -1,0 +1,87 @@
+{
+  "generated": "2026-07-01",
+  "dataset": "covid-chestxray-dataset (public, GitHub)",
+  "model": "torchxrayvision/densenet121-res224-all",
+  "n_images": 73,
+  "n_pneumonia": 56,
+  "n_normal": 17,
+  "target_sensitivity": 0.9,
+  "folds": 5,
+  "cv_triage": {
+    "default_thresholds": {
+      "sensitivity": {
+        "mean": 0.9454545454545455,
+        "std": 0.04453617714151235
+      },
+      "specificity": {
+        "mean": 0.35,
+        "std": 0.31797973380564853
+      }
+    },
+    "calibrated_thresholds": {
+      "sensitivity": {
+        "mean": 0.9287878787878789,
+        "std": 0.03572674582591394
+      },
+      "specificity": {
+        "mean": 0.29999999999999993,
+        "std": 0.26666666666666666
+      }
+    }
+  },
+  "sens_spec_frontier": {
+    "0.80": {
+      "sensitivity": {
+        "mean": 0.8924242424242423,
+        "std": 0.03723698705286211
+      },
+      "specificity": {
+        "mean": 0.41666666666666663,
+        "std": 0.3415650255319866
+      }
+    },
+    "0.85": {
+      "sensitivity": {
+        "mean": 0.9287878787878789,
+        "std": 0.03572674582591394
+      },
+      "specificity": {
+        "mean": 0.35,
+        "std": 0.31797973380564853
+      }
+    },
+    "0.90": {
+      "sensitivity": {
+        "mean": 0.9287878787878789,
+        "std": 0.03572674582591394
+      },
+      "specificity": {
+        "mean": 0.29999999999999993,
+        "std": 0.26666666666666666
+      }
+    },
+    "0.95": {
+      "sensitivity": {
+        "mean": 0.9636363636363636,
+        "std": 0.04453617714151235
+      },
+      "specificity": {
+        "mean": 0.2,
+        "std": 0.2666666666666667
+      }
+    }
+  },
+  "recommended_thresholds": {
+    "pneumothorax": 0.45,
+    "pleural_effusion": 0.716,
+    "consolidation": 0.163,
+    "lung_opacity": 0.239,
+    "cardiomegaly": 0.647
+  },
+  "caveats": [
+    "Small sample (esp. normals) \u2192 noisy CV estimates.",
+    "Pneumonia-proxy labels; only consolidation/lung_opacity have positives here.",
+    "pneumothorax/effusion/cardiomegaly calibrated on normals only (specificity), recall uncalibrated \u2014 pneumothorax capped low to stay sensitive.",
+    "Recalibrate on a local, well-powered, adjudicated dataset before clinical use."
+  ]
+}

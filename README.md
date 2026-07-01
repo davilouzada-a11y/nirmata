@@ -175,8 +175,26 @@ Reading: the model **genuinely reads pathology** from real radiographs (AUROC
 ~0.79–0.81, not chance). **Validation drove a real change:** it showed the
 model's *Lung Opacity* signal detects pneumonia better than `consolidation`
 alone, so we **added `lung_opacity` as a finding** — triage sensitivity rose
-**0.89 → 0.95** (missed pneumonias 6 → 3) at no cost to specificity. Still open:
-specificity is low (over-flagging) → thresholds need **local calibration** (next).
+**0.89 → 0.95** (missed pneumonias 6 → 3) at no cost to specificity.
+
+### Threshold calibration (honest null result)
+
+We then tried to fix the low specificity by calibrating per-finding thresholds
+(`ml/validation/calibrate.py`, 5-fold stratified CV — calibrate on train, measure
+on held-out; report `ml/validation/reports/calibration_*.md`). It **did not help**:
+
+| target sens | specificity (CV) |
+| --- | --- |
+| 0.80 | 0.42 ± 0.34 |
+| 0.90 | 0.30 ± 0.27 |
+| 0.95 | 0.20 ± 0.27 |
+
+The frontier is shallow and the variance huge (only 17 normals). Honest takeaway:
+**thresholds are not the lever here** — the ceiling is the model's separability
+(AUROC ~0.8) and a tiny, noisy normal set. So we **did not ship** overfit
+thresholds; specificity needs *more/cleaner normal data + local recalibration*
+(and possibly a stronger model), not a threshold tweak. The calibration harness
+is ready to run on a proper local dataset.
 
 ⚠️ **Not a certified/external validation:** the pretrained weights overlap the
 public training data (optimistic), normals are few (wide CIs), and labels are a

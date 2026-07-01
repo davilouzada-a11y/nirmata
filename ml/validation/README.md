@@ -7,10 +7,21 @@ just accuracy — because missing a positive matters more than overall accuracy.
 ```
 ml/validation/
 ├── metrics.py            # AUROC (+bootstrap CI), AUPRC, sens/spec/PPV/NPV
+├── calibrate.py          # per-finding threshold calibration (target-sens / normal-FPR)
 ├── datasets/covid_cxr.py # fetches real CXRs from covid-chestxray-dataset (GitHub)
-└── run_covid.py          # runs the xrv backend on it → JSON + Markdown report
-reports/                  # committed validation reports
+├── run_covid.py          # validation run → JSON + Markdown report
+└── calibrate_covid.py    # k-fold CV threshold calibration + sens/spec frontier
+reports/                  # committed validation & calibration reports
 ```
+
+## Calibration finding (honest)
+
+Calibrating thresholds on this dataset **did not** improve triage specificity
+(CV: 0.35 → 0.30; the sens/spec frontier tops out ~0.42 even at target
+sensitivity 0.80, with ±0.3 variance from just 17 normals). The lever here is
+**more/cleaner normal data + local recalibration**, not the threshold choice —
+so no overfit thresholds were shipped. Re-run `calibrate_covid.py` on a proper
+local set to derive deployable operating points.
 
 ## Run
 
