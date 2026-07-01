@@ -88,6 +88,10 @@ class XRVPredictor:
         except Exception:
             return None
 
+    def raw_pathology_scores(self, image_path: str) -> dict[str, float]:
+        """All 18 TorchXRayVision pathology probabilities (for validation/analysis)."""
+        return self._probs(self._preprocess(image_path))
+
     def predict(self, image_path: str, *, thresholds: dict | None = None,
                 heatmap_dir: str | None = None) -> dict:
         thresholds = thresholds or {}

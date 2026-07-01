@@ -23,3 +23,6 @@ ml/data/
 
 # OS
 .DS_Store
+
+# Validation image cache
+ml/validation/.cache/

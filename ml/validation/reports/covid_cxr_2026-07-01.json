@@ -1,0 +1,130 @@
+{
+  "generated": "2026-07-01",
+  "dataset": "covid-chestxray-dataset (public, GitHub)",
+  "model": "torchxrayvision/densenet121-res224-all",
+  "n_images": 73,
+  "n_pneumonia": 56,
+  "n_normal": 17,
+  "task": "pneumonia/consolidation vs No Finding (frontal X-rays)",
+  "app_shipped": {
+    "consolidation_score_vs_pneumonia": {
+      "n": 73,
+      "n_pos": 56,
+      "n_neg": 17,
+      "auroc": 0.7867647058823529,
+      "auroc_ci95": [
+        0.630738142714713,
+        0.9199777647013427
+      ],
+      "auprc": 0.9059383498335386,
+      "threshold": 0.5,
+      "tp": 46,
+      "fp": 5,
+      "tn": 12,
+      "fn": 10,
+      "sensitivity": 0.8214285714285714,
+      "specificity": 0.7058823529411765,
+      "ppv": 0.9019607843137255,
+      "npv": 0.5454545454545454
+    },
+    "normal_score_vs_normal": {
+      "n": 73,
+      "n_pos": 17,
+      "n_neg": 56,
+      "auroc": 0.6701680672268908,
+      "auroc_ci95": [
+        0.4939274976518509,
+        0.8402046783625731
+      ],
+      "auprc": 0.4845097554440213,
+      "threshold": 0.5,
+      "tp": 6,
+      "fp": 6,
+      "tn": 50,
+      "fn": 11,
+      "sensitivity": 0.35294117647058826,
+      "specificity": 0.8928571428571429,
+      "ppv": 0.5,
+      "npv": 0.819672131147541
+    },
+    "triage_pneumonia_flagged_abnormal": {
+      "threshold": 0.5,
+      "tp": 50,
+      "fp": 11,
+      "tn": 6,
+      "fn": 6,
+      "sensitivity": 0.8928571428571429,
+      "specificity": 0.35294117647058826,
+      "ppv": 0.819672131147541,
+      "npv": 0.5
+    }
+  },
+  "underlying_model_context": {
+    "Lung Opacity": {
+      "n": 73,
+      "n_pos": 56,
+      "n_neg": 17,
+      "auroc": 0.8046218487394958,
+      "auroc_ci95": [
+        0.6482346546668014,
+        0.9310864715668481
+      ],
+      "auprc": 0.915288772276352,
+      "threshold": 0.5,
+      "tp": 46,
+      "fp": 4,
+      "tn": 13,
+      "fn": 10,
+      "sensitivity": 0.8214285714285714,
+      "specificity": 0.7647058823529411,
+      "ppv": 0.92,
+      "npv": 0.5652173913043478
+    },
+    "Pneumonia": {
+      "n": 73,
+      "n_pos": 56,
+      "n_neg": 17,
+      "auroc": 0.7394957983193278,
+      "auroc_ci95": [
+        0.6113779657054089,
+        0.8538958333333334
+      ],
+      "auprc": 0.9087356658095116,
+      "threshold": 0.5,
+      "tp": 20,
+      "fp": 1,
+      "tn": 16,
+      "fn": 36,
+      "sensitivity": 0.35714285714285715,
+      "specificity": 0.9411764705882353,
+      "ppv": 0.9523809523809523,
+      "npv": 0.3076923076923077
+    },
+    "Consolidation": {
+      "n": 73,
+      "n_pos": 56,
+      "n_neg": 17,
+      "auroc": 0.7867647058823529,
+      "auroc_ci95": [
+        0.630738142714713,
+        0.9199777647013427
+      ],
+      "auprc": 0.9059383498335386,
+      "threshold": 0.5,
+      "tp": 46,
+      "fp": 5,
+      "tn": 12,
+      "fn": 10,
+      "sensitivity": 0.8214285714285714,
+      "specificity": 0.7058823529411765,
+      "ppv": 0.9019607843137255,
+      "npv": 0.5454545454545454
+    }
+  },
+  "caveats": [
+    "Few normal cases; wide CIs.",
+    "Labels are diagnosis-centric (pneumonia/COVID), used as a consolidation proxy.",
+    "Pretrained model trained on overlapping public data \u2014 optimistic, not a true external validation.",
+    "No pneumothorax/effusion/cardiomegaly ground truth in this dataset."
+  ]
+}
