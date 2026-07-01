@@ -5,11 +5,14 @@ findings, exactly as defined in the project blueprint.
 """
 
 # Finding codes for the MVP (order matters for stable JSON output).
+# `lung_opacity` was added after validation showed it detects pneumonia better
+# than `consolidation` alone (see ml/validation/reports).
 FINDING_CODES = [
     "normal_no_critical_finding",
     "pneumothorax",
     "pleural_effusion",
     "consolidation",
+    "lung_opacity",
     "cardiomegaly",
 ]
 
@@ -22,6 +25,7 @@ DEFAULT_THRESHOLDS = {
     "pneumothorax": 0.45,
     "pleural_effusion": 0.62,
     "consolidation": 0.55,
+    "lung_opacity": 0.55,
     "cardiomegaly": 0.60,
 }
 
@@ -33,6 +37,7 @@ XRV_DEFAULT_THRESHOLDS = {
     "pneumothorax": 0.40,
     "pleural_effusion": 0.50,
     "consolidation": 0.50,
+    "lung_opacity": 0.50,
     "cardiomegaly": 0.50,
 }
 

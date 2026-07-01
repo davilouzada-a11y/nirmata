@@ -24,6 +24,7 @@ XRV_PATHOLOGY = {
     "pneumothorax": "Pneumothorax",
     "pleural_effusion": "Effusion",
     "consolidation": "Consolidation",
+    "lung_opacity": "Lung Opacity",
     "cardiomegaly": "Cardiomegaly",
 }
 ABNORMAL_CODES = list(XRV_PATHOLOGY.keys())

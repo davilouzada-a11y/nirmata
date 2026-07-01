@@ -39,7 +39,7 @@ def test_xrv_reads_image_and_returns_findings(predictor):
 
     codes = [f["finding_code"] for f in result["findings"]]
     assert codes[0] == "normal_no_critical_finding"
-    for code in ["pneumothorax", "pleural_effusion", "consolidation", "cardiomegaly"]:
+    for code in ["pneumothorax", "pleural_effusion", "consolidation", "lung_opacity", "cardiomegaly"]:
         assert code in codes
 
     for f in result["findings"]:
@@ -53,6 +53,6 @@ def test_normal_is_inverse_of_strongest_abnormal(predictor):
     path = _gradient_png()
     result = predictor.predict(path, heatmap_dir=None)
     findings = {f["finding_code"]: f["probability"] for f in result["findings"]}
-    strongest = max(findings[c] for c in
-                    ["pneumothorax", "pleural_effusion", "consolidation", "cardiomegaly"])
+    # "normal" is derived from the strongest of ALL abnormal findings.
+    strongest = max(p for c, p in findings.items() if c != "normal_no_critical_finding")
     assert abs(findings["normal_no_critical_finding"] - (1.0 - strongest)) < 1e-3

@@ -7,13 +7,14 @@ data:
 model:
   backbone: densenet121                   # densenet121 | resnet50
   pretrained: true
-  num_classes: 5
+  num_classes: 6
 
 findings:                                 # column order must match labels.csv
   - normal_no_critical_finding
   - pneumothorax
   - pleural_effusion
   - consolidation
+  - lung_opacity
   - cardiomegaly
 
 train:
@@ -33,4 +34,5 @@ thresholds:
   pneumothorax: 0.45
   pleural_effusion: 0.62
   consolidation: 0.55
+  lung_opacity: 0.55
   cardiomegaly: 0.60

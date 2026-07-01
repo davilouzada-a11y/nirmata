@@ -92,7 +92,7 @@ def test_full_workflow():
     assert pred.status_code == 200, pred.text
     body = pred.json()
     assert body["disclaimer"]
-    assert len(body["findings"]) == 5
+    assert len(body["findings"]) == 6
     assert client.get(f"/studies/{study_id}", headers=headers).json()["status"] == "predicted"
 
     # Image and (any) heatmap are retrievable.

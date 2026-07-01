@@ -168,14 +168,15 @@ committed reports are in `ml/validation/reports/`. Latest run (n=73, 56 pneumoni
 | Signal | AUROC (95% CI) | at threshold |
 | --- | --- | --- |
 | App `consolidation` vs pneumonia | 0.79 (0.63–0.92) | sens 0.82 · spec 0.71 |
-| App abnormal-vs-normal **triage** | — | **sens 0.89** · spec 0.35 |
-| Model *Lung Opacity* (not surfaced) | 0.81 (0.65–0.93) | sens 0.82 · spec 0.76 |
+| App `lung_opacity` vs pneumonia | 0.81 (0.65–0.93) | sens 0.82 · spec 0.76 |
+| App abnormal-vs-normal **triage** | — | **sens 0.95** · spec 0.35 |
 
 Reading: the model **genuinely reads pathology** from real radiographs (AUROC
-~0.79–0.81, not chance), and triage catches **89% of pneumonia** as abnormal.
-Two honest findings drop out: (1) the 4-class app misses the model's stronger
-*Lung Opacity* signal → adding that class would improve pneumonia triage; (2)
-specificity is low (over-flagging) → thresholds need **local calibration**.
+~0.79–0.81, not chance). **Validation drove a real change:** it showed the
+model's *Lung Opacity* signal detects pneumonia better than `consolidation`
+alone, so we **added `lung_opacity` as a finding** — triage sensitivity rose
+**0.89 → 0.95** (missed pneumonias 6 → 3) at no cost to specificity. Still open:
+specificity is low (over-flagging) → thresholds need **local calibration** (next).
 
 ⚠️ **Not a certified/external validation:** the pretrained weights overlap the
 public training data (optimistic), normals are few (wide CIs), and labels are a

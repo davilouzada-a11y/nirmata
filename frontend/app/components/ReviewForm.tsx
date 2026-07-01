@@ -7,7 +7,8 @@ const LABELS: Record<string, string> = {
   normal_no_critical_finding: "Sem achado crítico",
   pneumothorax: "Pneumotórax",
   pleural_effusion: "Derrame pleural",
-  consolidation: "Consolidação / opacidade",
+  consolidation: "Consolidação",
+  lung_opacity: "Opacidade pulmonar",
   cardiomegaly: "Cardiomegalia",
 };
 

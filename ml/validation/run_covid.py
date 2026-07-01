@@ -55,7 +55,7 @@ def main():
     predictor = get_xrv_predictor(args.weights)
 
     y_pneu, y_norm = [], []
-    app_consolidation, app_normal, app_abnormal_pred = [], [], []
+    app_consolidation, app_lung_opacity, app_normal, app_abnormal_pred = [], [], [], []
     raw = {p: [] for p in ["Lung Opacity", "Pneumonia", "Consolidation"]}
 
     print("Running inference…")
@@ -67,6 +67,7 @@ def main():
         y_pneu.append(s["labels"]["pneumonia"])
         y_norm.append(s["labels"]["normal"])
         app_consolidation.append(probs["consolidation"])
+        app_lung_opacity.append(probs.get("lung_opacity", float("nan")))
         app_normal.append(probs["normal_no_critical_finding"])
         app_abnormal_pred.append(1 if abnormal else 0)
         scores = predictor.raw_pathology_scores(s["image_path"])
@@ -80,6 +81,7 @@ def main():
 
     # As shipped by the app.
     app_consolidation_m = evaluate_score(y_pneu, app_consolidation, APP_CONSOLIDATION_THR)
+    app_lung_opacity_m = evaluate_score(y_pneu, app_lung_opacity, 0.50)
     app_normal_m = evaluate_score(y_norm, app_normal, 0.50)
     # App triage: does overall_status flag pneumonia as abnormal / normals as normal?
     triage = binary_at_threshold(y_pneu, np.array(app_abnormal_pred), 0.5)
@@ -97,6 +99,7 @@ def main():
         "task": "pneumonia/consolidation vs No Finding (frontal X-rays)",
         "app_shipped": {
             "consolidation_score_vs_pneumonia": app_consolidation_m,
+            "lung_opacity_score_vs_pneumonia": app_lung_opacity_m,
             "normal_score_vs_normal": app_normal_m,
             "triage_pneumonia_flagged_abnormal": triage,
         },
@@ -121,8 +124,9 @@ def main():
         f"**Task:** {report['task']}  ·  **n={report['n_images']}** "
         f"({report['n_pneumonia']} pneumonia, {report['n_normal']} normal)",
         "",
-        "## As shipped by the app (4-class subset, real thresholds)",
+        "## As shipped by the app (real thresholds)",
         f"- **`consolidation` score vs pneumonia:** {_fmt(app_consolidation_m)}",
+        f"- **`lung_opacity` score vs pneumonia:** {_fmt(app_lung_opacity_m)}",
         f"- **`normal` score vs No-Finding:** {_fmt(app_normal_m)}",
         f"- **Triage (pneumonia flagged abnormal):** sensitivity "
         f"{triage['sensitivity']:.2f}, specificity {triage['specificity']:.2f} "
