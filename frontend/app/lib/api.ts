@@ -24,7 +24,10 @@ function authHeaders(): Record<string, string> {
 async function handle(res: Response) {
   if (res.status === 401) {
     clearToken();
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      const next = `${window.location.pathname}${window.location.search}`;
+      window.location.href = `/login?next=${encodeURIComponent(next)}`;
+    }
     throw new Error("Não autenticado");
   }
   if (!res.ok) {
@@ -74,6 +77,83 @@ export interface ModelVersion {
   created_at: string;
 }
 
+export interface ClinicalPolicyRule {
+  finding_code: string;
+  label: string;
+  critical: boolean;
+  worklist_priority: "critical" | "routine";
+  requires_human_review: boolean;
+  action: string;
+}
+
+export interface ClinicalPolicy {
+  id: string;
+  name: string;
+  version: string;
+  scope: string;
+  status: string;
+  active: boolean;
+  modality: string[];
+  body_part: string;
+  clinical_output: string;
+  human_review_required: boolean;
+  autonomous_diagnosis_allowed: boolean;
+  finalization_rule: string;
+  critical_findings: string[];
+  rule_guardrails: Record<string, unknown>;
+  rules: ClinicalPolicyRule[];
+  created_at: string;
+  updated_at: string | null;
+  activated_at: string | null;
+  created_by_user_id: string | null;
+  notes: string | null;
+}
+
+export interface DivergenceBucket {
+  reviewed_findings: number;
+  divergences: number;
+  divergence_rate: number;
+}
+
+export interface CriticalDivergenceCase {
+  study_id: string;
+  review_id: string;
+  finding_code: string;
+  decision: string;
+  model_version: string;
+  clinical_policy_version: string;
+  reviewed_at: string;
+}
+
+export interface DivergenceReport {
+  filters: {
+    from: string | null;
+    to: string | null;
+    model_version: string | null;
+    clinical_policy_version: string | null;
+  };
+  summary: {
+    reviewed_studies: number;
+    reviews: number;
+    reviewed_findings: number;
+    divergences: number;
+    divergence_rate: number;
+    critical_divergences: number;
+  };
+  by_decision: Record<string, number>;
+  by_finding: Record<string, DivergenceBucket>;
+  by_model_version: Record<string, DivergenceBucket>;
+  by_clinical_policy: Record<string, DivergenceBucket>;
+  critical_divergence_cases: CriticalDivergenceCase[];
+}
+
+export interface DivergenceFilters {
+  from?: string;
+  to?: string;
+  model_version?: string;
+  clinical_policy_version?: string;
+}
+
 export interface Finding {
   finding_code: string;
   probability: number;
@@ -100,6 +180,18 @@ export const api = {
     fetch(`${API}/studies/stats`, { headers: authHeaders() }).then(handle),
   modelVersions: (): Promise<ModelVersion[]> =>
     fetch(`${API}/models/versions`, { headers: authHeaders() }).then(handle),
+  activePolicy: (): Promise<ClinicalPolicy> =>
+    fetch(`${API}/models/policy/active`, { headers: authHeaders() }).then(handle),
+  clinicalPolicies: (): Promise<ClinicalPolicy[]> =>
+    fetch(`${API}/models/policies`, { headers: authHeaders() }).then(handle),
+  divergenceReport: (filters: DivergenceFilters = {}): Promise<DivergenceReport> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    const query = params.toString();
+    return fetch(`${API}/governance/divergence${query ? `?${query}` : ""}`, { headers: authHeaders() }).then(handle);
+  },
   getStudy: (id: string) =>
     fetch(`${API}/studies/${id}`, { headers: authHeaders() }).then(handle),
   predict: (id: string): Promise<Prediction> =>

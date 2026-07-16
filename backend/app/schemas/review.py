@@ -42,6 +42,7 @@ class ReviewOut(BaseModel):
     prediction_id: Optional[str]
     reviewer_id: str
     decision: str
+    clinical_policy_version: Optional[str] = None
     final_report: str
     reviewed_at: datetime
     findings: List[ReviewFindingOut]

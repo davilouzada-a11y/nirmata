@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class StudyOut(BaseModel):
@@ -29,3 +29,15 @@ class StudyListItem(BaseModel):
     priority: str = "routine"  # "critical" | "routine"
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StudyStateChangeRequest(BaseModel):
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_not_be_blank(cls, value: str) -> str:
+        reason = value.strip()
+        if not reason:
+            raise ValueError("reason is required")
+        return reason

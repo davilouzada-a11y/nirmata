@@ -17,6 +17,7 @@ class Review(Base):
     prediction_id = Column(GUID, ForeignKey("predictions.id"), nullable=True)
     reviewer_id = Column(GUID, ForeignKey("users.id"), nullable=False)
     decision = Column(String, nullable=False)  # confirmed | corrected | rejected
+    clinical_policy_version = Column(String, nullable=True)
     final_report = Column(Text, nullable=False)
     reviewed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

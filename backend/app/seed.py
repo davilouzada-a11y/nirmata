@@ -1,4 +1,4 @@
-"""Seed the database with the model version and a first radiologist user.
+"""Seed the database with model, policy, reviewer and governance users.
 
 Run: ``python -m app.seed``
 """
@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal, init_db
 from app.core.security import hash_password
 from app.models.user import User
+from app.services.clinical_policy import seed_default_policy
 from app.services.study_service import get_or_create_model_version
 
 settings = get_settings()
@@ -16,6 +17,7 @@ def seed():
     db = SessionLocal()
     try:
         get_or_create_model_version(db)
+        seed_default_policy(db)
 
         existing = db.query(User).filter_by(email=settings.seed_admin_email).first()
         if not existing:
@@ -29,6 +31,19 @@ def seed():
             print(f"Created radiologist user: {settings.seed_admin_email}")
         else:
             print("Radiologist user already exists.")
+
+        governance = db.query(User).filter_by(email=settings.seed_governance_email).first()
+        if not governance:
+            db.add(User(
+                name="Governança Clínica",
+                email=settings.seed_governance_email,
+                role="admin_clinical",
+                hashed_password=hash_password(settings.seed_governance_password),
+                active=True,
+            ))
+            print(f"Created clinical governance user: {settings.seed_governance_email}")
+        else:
+            print("Clinical governance user already exists.")
         db.commit()
         print("Seed complete.")
     finally:

@@ -27,23 +27,23 @@ export default function FindingList({ findings, selected, onSelect }: Props) {
           <li
             key={f.finding_code}
             onClick={() => f.heatmap_url && onSelect(active ? null : f.finding_code)}
-            className={`rounded-lg border p-2 ${
-              f.is_positive ? "border-warn/60 bg-warn/5" : "border-slate-800"
-            } ${f.heatmap_url ? "cursor-pointer" : ""} ${active ? "ring-1 ring-sky-500" : ""}`}
+            className={`rounded border p-3 transition ${
+              f.is_positive ? "border-[#ffb35c]/45 bg-[#ffb35c]/10" : "border-white/10 bg-white/[0.025]"
+            } ${f.heatmap_url ? "cursor-pointer hover:bg-white/[0.045]" : ""} ${active ? "ring-1 ring-[#42e8ff]" : ""}`}
           >
             <div className="flex items-center justify-between text-sm">
-              <span className={f.is_positive ? "font-medium text-warn" : ""}>
+              <span className={f.is_positive ? "font-black text-[#ffb35c]" : "font-bold text-white/78"}>
                 {LABELS[f.finding_code] || f.finding_code}
               </span>
-              <span className="tabular-nums">{pct}%</span>
+              <span className="font-black tabular-nums text-white">{pct}%</span>
             </div>
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-black/35">
               <div
-                className={`h-full ${f.is_positive ? "bg-warn" : "bg-slate-600"}`}
+                className={`h-full ${f.is_positive ? "bg-[#ffb35c]" : "bg-[#86a8df]/55"}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="mt-1 flex justify-between text-[11px] text-slate-500">
+            <div className="mt-2 flex justify-between text-[11px] font-bold text-white/42">
               <span>limiar {Math.round(f.threshold * 100)}%</span>
               {f.heatmap_url && <span>{active ? "ocultar heatmap" : "ver heatmap"}</span>}
             </div>

@@ -28,6 +28,8 @@ export default function DicomViewer({ imageUrl, isDicom, heatmapUrl, showHeatmap
   const [contrast, setContrast] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [dicomError, setDicomError] = useState<string | null>(null);
+  const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null);
+  const [heatmapObjectUrl, setHeatmapObjectUrl] = useState<string | null>(null);
   const dwvRef = useRef<any>(null);
 
   useEffect(() => {
@@ -59,9 +61,65 @@ export default function DicomViewer({ imageUrl, isDicom, heatmapUrl, showHeatmap
     };
   }, [isDicom, imageUrl]);
 
+  useEffect(() => {
+    if (isDicom) {
+      setImageObjectUrl(null);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const token = getToken();
+      const res = await fetch(imageUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      if (cancelled) return;
+      objectUrl = URL.createObjectURL(blob);
+      setImageObjectUrl(objectUrl);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setImageObjectUrl(null);
+    };
+  }, [imageUrl, isDicom]);
+
+  useEffect(() => {
+    if (!heatmapUrl) {
+      setHeatmapObjectUrl(null);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const token = getToken();
+      const res = await fetch(heatmapUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      if (cancelled) return;
+      objectUrl = URL.createObjectURL(blob);
+      setHeatmapObjectUrl(objectUrl);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setHeatmapObjectUrl(null);
+    };
+  }, [heatmapUrl]);
+
   return (
     <div className="space-y-2">
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-slate-800 bg-black">
+      <div className="relative aspect-square w-full overflow-hidden rounded border border-white/10 bg-black shadow-[inset_0_0_42px_rgba(66,232,255,0.06)]">
         {isDicom ? (
           <div
             id={LAYER_GROUP_ID}
@@ -71,17 +129,17 @@ export default function DicomViewer({ imageUrl, isDicom, heatmapUrl, showHeatmap
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={imageUrl}
+            src={imageObjectUrl || ""}
             alt="Radiografia"
             className="absolute inset-0 h-full w-full object-contain"
             style={{ filter: `contrast(${contrast}%) brightness(${brightness}%)` }}
           />
         )}
 
-        {showHeatmap && heatmapUrl && (
+        {showHeatmap && heatmapObjectUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={heatmapUrl}
+            src={heatmapObjectUrl}
             alt="Heatmap"
             className="pointer-events-none absolute inset-0 h-full w-full object-contain mix-blend-screen"
             style={{ opacity: heatmapOpacity }}
@@ -95,7 +153,7 @@ export default function DicomViewer({ imageUrl, isDicom, heatmapUrl, showHeatmap
         )}
       </div>
 
-      <div className="flex gap-4 text-xs text-slate-400">
+      <div className="flex flex-wrap gap-4 text-xs font-bold text-white/50">
         <label className="flex items-center gap-2">
           Contraste
           <input type="range" min={50} max={200} value={contrast}

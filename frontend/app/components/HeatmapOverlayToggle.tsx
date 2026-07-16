@@ -10,7 +10,7 @@ interface Props {
 
 export default function HeatmapOverlayToggle({ enabled, opacity, onToggle, onOpacity, disabled }: Props) {
   return (
-    <div className="flex items-center gap-3 text-xs text-slate-400">
+    <div className="rx-panel flex flex-wrap items-center gap-3 px-3 py-2 text-xs font-bold text-white/55">
       <label className="flex items-center gap-2">
         <input
           type="checkbox"

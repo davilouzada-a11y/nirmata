@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.db import init_db
-from app.api import auth, studies, audit, models
+from app.api import audit, auth, governance, models, studies
 
 settings = get_settings()
 
@@ -49,3 +49,4 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(studies.router, prefix="/studies", tags=["studies"])
 app.include_router(audit.router, prefix="/audit", tags=["audit"])
 app.include_router(models.router, prefix="/models", tags=["models"])
+app.include_router(governance.router, prefix="/governance", tags=["governance"])

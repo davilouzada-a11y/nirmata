@@ -23,14 +23,14 @@ export default function AuditTimeline({ studyId, refreshKey }: { studyId: string
     api.auditTrail(studyId).then(setEntries).catch(() => setEntries([]));
   }, [studyId, refreshKey]);
 
-  if (!entries.length) return <p className="text-xs text-slate-500">Sem eventos.</p>;
+  if (!entries.length) return <p className="text-xs text-white/45">Sem eventos.</p>;
 
   return (
-    <ol className="space-y-2 text-xs">
+    <ol className="space-y-3 text-xs">
       {entries.map((e, i) => (
-        <li key={i} className="flex gap-2">
-          <span className="text-slate-600">{new Date(e.created_at).toLocaleString()}</span>
-          <span>{ACTION_LABEL[e.action] || e.action}</span>
+        <li key={i} className="border-l border-[#42e8ff]/35 pl-3">
+          <span className="block font-bold text-white/38">{new Date(e.created_at).toLocaleString()}</span>
+          <span className="mt-1 block font-black text-white/78">{ACTION_LABEL[e.action] || e.action}</span>
         </li>
       ))}
     </ol>

@@ -15,11 +15,25 @@ from app.models.prediction import Prediction
 from app.models.review import Review, ReviewFinding
 from app.schemas.review import ReviewCreate
 from app.services import audit_service
+from app.services.clinical_policy import active_policy
 from app.services.study_service import latest_prediction
 
 
 def create_review(db: Session, study: Study, payload: ReviewCreate, reviewer_id: str) -> Review:
     if study.status not in {"predicted", "under_review"}:
+        audit_service.log(
+            db,
+            user_id=reviewer_id,
+            action="policy.denied",
+            entity="study",
+            entity_id=study.id,
+            payload={
+                "reason": "invalid_review_state",
+                "current_state": study.status,
+                "required_states": ["predicted", "under_review"],
+            },
+        )
+        db.commit()
         raise HTTPException(
             status_code=409,
             detail=f"Study must be predicted before review (current state: {study.status}).",
@@ -31,17 +45,51 @@ def create_review(db: Session, study: Study, payload: ReviewCreate, reviewer_id:
             id=payload.prediction_id, study_id=study.id
         ).first()
         if not prediction:
+            audit_service.log(
+                db,
+                user_id=reviewer_id,
+                action="policy.denied",
+                entity="study",
+                entity_id=study.id,
+                payload={"reason": "prediction_id_not_found", "prediction_id": payload.prediction_id},
+            )
+            db.commit()
             raise HTTPException(status_code=404, detail="prediction_id not found for this study")
     else:
         prediction = latest_prediction(db, study.id)
     if not prediction:
+        audit_service.log(
+            db,
+            user_id=reviewer_id,
+            action="policy.denied",
+            entity="study",
+            entity_id=study.id,
+            payload={"reason": "missing_prediction"},
+        )
+        db.commit()
         raise HTTPException(status_code=409, detail="No prediction exists to review.")
 
+    policy = active_policy(db)
+    audit_service.log(
+        db,
+        user_id=reviewer_id,
+        action="policy.evaluated",
+        entity="study",
+        entity_id=study.id,
+        payload={
+            "clinical_policy_version": policy["version"],
+            "policy_status": policy["status"],
+            "prediction_id": prediction.id,
+            "review_gate": "human_review_required",
+            "allowed": True,
+        },
+    )
     ai_positive = {f.finding_code: f.is_positive for f in prediction.findings}
 
     review = Review(
         study_id=study.id, prediction_id=prediction.id, reviewer_id=reviewer_id,
         decision=payload.decision, final_report=payload.final_report,
+        clinical_policy_version=policy["version"],
     )
     db.add(review)
     db.flush()
@@ -64,6 +112,7 @@ def create_review(db: Session, study: Study, payload: ReviewCreate, reviewer_id:
                       payload={"review_id": review.id, "decision": payload.decision,
                                "prediction_id": prediction.id,
                                "model_version_id": prediction.model_version_id,
+                               "clinical_policy_version": policy["version"],
                                "divergences": divergences})
     db.commit()
     db.refresh(review)

@@ -10,10 +10,10 @@ from app.constants import DISCLAIMER
 from app.models.study import Study
 from app.models.prediction import Prediction
 from app.models.user import User
-from app.schemas.study import StudyOut, StudyListItem
+from app.schemas.study import StudyOut, StudyListItem, StudyStateChangeRequest
 from app.schemas.prediction import PredictionResponse, FindingOut
 from app.schemas.review import ReviewCreate, ReviewOut
-from app.services import study_service, review_service
+from app.services import audit_service, review_service, study_service
 
 router = APIRouter()
 
@@ -90,6 +90,15 @@ def get_image(study_id: str, db: Session = Depends(get_db), user: User = Depends
     study = _get_study_or_404(db, study_id)
     if not study.image_path or not os.path.exists(study.image_path):
         raise HTTPException(status_code=404, detail="Image file missing")
+    audit_service.log(
+        db,
+        user_id=user.id,
+        action="image.viewed",
+        entity="study",
+        entity_id=study.id,
+        payload={"image_format": study.image_format, "endpoint": "study.image"},
+    )
+    db.commit()
     return FileResponse(study.image_path)
 
 
@@ -98,6 +107,60 @@ def predict(study_id: str, db: Session = Depends(get_db), user: User = Depends(g
     study = _get_study_or_404(db, study_id)
     prediction = study_service.run_prediction(db, study, user_id=user.id)
     return _prediction_response(prediction)
+
+
+@router.post("/{study_id}/hold", response_model=StudyOut)
+def hold_study(study_id: str, payload: StudyStateChangeRequest,
+               db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    study = _get_study_or_404(db, study_id)
+    if study.status == "finalized":
+        raise HTTPException(status_code=409, detail="Finalized studies cannot be put on hold.")
+    if study.status == "blocked":
+        raise HTTPException(status_code=409, detail="Study is already on hold.")
+    previous_status = study.status
+    study.status = "blocked"
+    audit_service.log(
+        db,
+        user_id=user.id,
+        action="study.hold",
+        entity="study",
+        entity_id=study.id,
+        payload={
+            "previous_status": previous_status,
+            "new_status": study.status,
+            "reason": payload.reason,
+        },
+    )
+    db.commit()
+    db.refresh(study)
+    return study
+
+
+@router.post("/{study_id}/reopen", response_model=StudyOut)
+def reopen_study(study_id: str, payload: StudyStateChangeRequest,
+                 db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    study = _get_study_or_404(db, study_id)
+    if study.status != "blocked":
+        raise HTTPException(status_code=409, detail="Only blocked studies can be reopened.")
+    previous_status = study.status
+    prediction = study_service.latest_prediction(db, study.id)
+    study.status = "predicted" if prediction else "uploaded"
+    audit_service.log(
+        db,
+        user_id=user.id,
+        action="study.reopened",
+        entity="study",
+        entity_id=study.id,
+        payload={
+            "previous_status": previous_status,
+            "new_status": study.status,
+            "reason": payload.reason,
+            "prediction_id": prediction.id if prediction else None,
+        },
+    )
+    db.commit()
+    db.refresh(study)
+    return study
 
 
 @router.get("/{study_id}/prediction", response_model=PredictionResponse)
@@ -118,6 +181,15 @@ def get_heatmap(study_id: str, finding_code: str, db: Session = Depends(get_db),
     finding = next((f for f in prediction.findings if f.finding_code == finding_code), None)
     if not finding or not finding.heatmap_path or not os.path.exists(finding.heatmap_path):
         raise HTTPException(status_code=404, detail="No heatmap for this finding")
+    audit_service.log(
+        db,
+        user_id=user.id,
+        action="image.heatmap_viewed",
+        entity="study",
+        entity_id=study_id,
+        payload={"finding_code": finding_code, "endpoint": "study.heatmap"},
+    )
+    db.commit()
     return FileResponse(finding.heatmap_path, media_type="image/png")
 
 

@@ -14,10 +14,8 @@ import os
 from sqlalchemy.orm import Session
 
 from app.constants import (
-    CRITICAL_FINDINGS,
     DEFAULT_THRESHOLDS,
     XRV_DEFAULT_THRESHOLDS,
-    OVERALL_ABNORMAL_CRITICAL,
 )
 from app.core.config import get_settings
 from app.models.study import Study
@@ -26,6 +24,7 @@ from app.models.model_version import ModelVersion
 from app.models.prediction import Prediction, PredictionFinding
 from app.services.inference_service import InferenceService
 from app.services import audit_service
+from app.services.clinical_policy import priority_for_overall
 
 settings = get_settings()
 
@@ -222,7 +221,7 @@ def list_studies(db: Session, status: str | None = None) -> list[dict]:
     for study in q.all():
         pred = latest_prediction(db, study.id)
         overall = pred.overall_status if pred else None
-        priority = "critical" if overall == OVERALL_ABNORMAL_CRITICAL else "routine"
+        priority = priority_for_overall(overall)
         rows.append({
             "id": study.id, "patient_code": study.patient_code, "view": study.view,
             "status": study.status, "created_at": study.created_at,

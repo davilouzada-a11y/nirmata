@@ -26,3 +26,6 @@ ml/data/
 
 # Validation image cache
 ml/validation/.cache/
+
+# Local QA artifacts
+tmp/

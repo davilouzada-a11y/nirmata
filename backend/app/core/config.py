@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     seed_admin_email: str = "radiologista@example.com"
     seed_admin_password: str = "changeme123"
 
+    # First-run governance user (can manage clinical policies).
+    seed_governance_email: str = "governanca@example.com"
+    seed_governance_password: str = "changeme123"
+
 
 @lru_cache
 def get_settings() -> Settings:

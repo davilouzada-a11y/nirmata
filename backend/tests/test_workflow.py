@@ -20,7 +20,9 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
 from app.core.db import SessionLocal, init_db  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
+from app.models.audit import AuditLog  # noqa: E402
 from app.models.user import User  # noqa: E402
+from app.services.clinical_policy import default_policy_payload  # noqa: E402
 from app.services.study_service import get_or_create_model_version  # noqa: E402
 
 client = TestClient(app)
@@ -38,6 +40,9 @@ def setup_db():
         if not db.query(User).filter_by(email="tech@example.com").first():
             db.add(User(name="Tech", email="tech@example.com", role="technician",
                         hashed_password=hash_password("secret123"), active=True))
+        if not db.query(User).filter_by(email="admin@example.com").first():
+            db.add(User(name="Admin", email="admin@example.com", role="admin",
+                        hashed_password=hash_password("secret123"), active=True))
         db.commit()
     finally:
         db.close()
@@ -52,6 +57,19 @@ def _token(email="doc@example.com", password="secret123"):
 
 def _auth(email="doc@example.com"):
     return {"Authorization": f"Bearer {_token(email)}"}
+
+
+def _policy_payload(version="dod-rx-cxr-policy-test-v0.2.0", activate=False):
+    payload = default_policy_payload()
+    return {
+        "version": version,
+        "scope": payload["scope"],
+        "rules": payload["rules"],
+        "human_review_required": True,
+        "autonomous_diagnosis_allowed": False,
+        "finalization_rule": "blocked_until_human_review",
+        "activate": activate,
+    }
 
 
 def _upload(headers):
@@ -111,6 +129,7 @@ def test_full_workflow():
                                "final_report": "Laudo final de teste."},
                          headers=headers)
     assert review.status_code == 201, review.text
+    assert review.json()["clinical_policy_version"] == "dod-rx-cxr-policy-v0.1.0"
     diverged = [f for f in review.json()["findings"] if f["diverged_from_ai"]]
     assert any(f["finding_code"] == flip_code for f in diverged)
 
@@ -120,7 +139,21 @@ def test_full_workflow():
     # Audit trail records upload, predict and review.
     trail = client.get(f"/audit/studies/{study_id}", headers=headers).json()
     actions = {e["action"] for e in trail}
-    assert {"study.upload", "study.predict", "study.review"} <= actions
+    assert {
+        "study.upload",
+        "policy.denied",
+        "study.predict",
+        "image.viewed",
+        "policy.evaluated",
+        "study.review",
+    } <= actions
+    denied_events = [e for e in trail if e["action"] == "policy.denied"]
+    assert denied_events[-1]["payload"]["reason"] == "invalid_review_state"
+    evaluated_events = [e for e in trail if e["action"] == "policy.evaluated"]
+    assert evaluated_events[-1]["payload"]["allowed"] is True
+    assert evaluated_events[-1]["payload"]["clinical_policy_version"] == "dod-rx-cxr-policy-v0.1.0"
+    review_events = [e for e in trail if e["action"] == "study.review"]
+    assert review_events[-1]["payload"]["clinical_policy_version"] == "dod-rx-cxr-policy-v0.1.0"
 
 
 def test_technician_cannot_review():
@@ -133,12 +166,146 @@ def test_technician_cannot_review():
     assert r.status_code == 403
 
 
+def test_admin_can_create_and_activate_clinical_policy():
+    headers = _auth("admin@example.com")
+    created = client.post("/models/policies",
+                          json=_policy_payload("dod-rx-cxr-policy-test-v0.2.0"),
+                          headers=headers)
+    assert created.status_code == 201, created.text
+    policy = created.json()
+    assert policy["name"] == "rx_triage_default"
+    assert policy["version"] == "dod-rx-cxr-policy-test-v0.2.0"
+    assert policy["active"] is False
+    assert policy["status"] == "draft"
+    assert policy["human_review_required"] is True
+    assert policy["created_by_user_id"]
+
+    activated = client.post(f"/models/policies/{policy['id']}/activate", headers=headers)
+    assert activated.status_code == 200, activated.text
+    assert activated.json()["active"] is True
+    assert activated.json()["status"] == "active"
+    assert activated.json()["activated_at"]
+
+    active = client.get("/models/policy/active", headers=headers).json()
+    assert active["version"] == "dod-rx-cxr-policy-test-v0.2.0"
+
+    db = SessionLocal()
+    try:
+        actions = {
+            row.action
+            for row in db.query(AuditLog).filter(AuditLog.entity == "clinical_policy").all()
+        }
+        assert {"policy.create", "policy.activate"} <= actions
+    finally:
+        db.close()
+
+
+def test_non_admin_cannot_manage_clinical_policy():
+    headers = _auth("tech@example.com")
+    r = client.post("/models/policies",
+                    json=_policy_payload("dod-rx-cxr-policy-test-forbidden"),
+                    headers=headers)
+    assert r.status_code == 403
+
+
+def test_policy_cannot_disable_human_review_or_allow_autonomous_diagnosis():
+    headers = _auth("admin@example.com")
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe")
+    unsafe["human_review_required"] = False
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-2")
+    unsafe["autonomous_diagnosis_allowed"] = True
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-3")
+    unsafe["must_have_human_review"] = False
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-4")
+    unsafe["allow_autonomous_diagnosis"] = True
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-5")
+    unsafe["max_autoclose_without_review_minutes"] = 5
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-6")
+    unsafe["allowed_workflow_states_for_auto_actions"] = ["predicted"]
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-7")
+    unsafe["finalization_rules"] = {"allow_auto_finalize": True}
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-8")
+    unsafe["disclaimer_rules"] = {"require_banner": False, "require_model_card_ack": True}
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+    unsafe = _policy_payload("dod-rx-cxr-policy-unsafe-9")
+    unsafe["audit_rules"] = {
+        "log_policy_version_on_review": False,
+        "log_policy_version_on_divergence": True,
+    }
+    assert client.post("/models/policies", json=unsafe, headers=headers).status_code == 422
+
+
 def test_reprediction_creates_new_prediction():
     headers = _auth()
     study_id = _upload(headers)
     p1 = client.post(f"/studies/{study_id}/predict", headers=headers).json()["prediction_id"]
     p2 = client.post(f"/studies/{study_id}/predict", headers=headers).json()["prediction_id"]
     assert p1 != p2  # old prediction preserved, new one created
+
+
+def test_hold_and_reopen_require_reason_and_audit_state_change():
+    headers = _auth()
+    study_id = _upload(headers)
+    prediction_id = client.post(f"/studies/{study_id}/predict", headers=headers).json()["prediction_id"]
+
+    blank = client.post(f"/studies/{study_id}/hold", json={"reason": "   "}, headers=headers)
+    assert blank.status_code == 422
+
+    held = client.post(
+        f"/studies/{study_id}/hold",
+        json={"reason": "Aguardar revisao senior por achado critico."},
+        headers=headers,
+    )
+    assert held.status_code == 200, held.text
+    assert held.json()["status"] == "blocked"
+
+    review = client.post(
+        f"/studies/{study_id}/review",
+        json={
+            "prediction_id": prediction_id,
+            "decision": "confirmed",
+            "final_findings": [],
+            "final_report": "Laudo final de teste.",
+        },
+        headers=headers,
+    )
+    assert review.status_code == 409
+
+    reopened = client.post(
+        f"/studies/{study_id}/reopen",
+        json={"reason": "Revisao senior liberou continuidade."},
+        headers=headers,
+    )
+    assert reopened.status_code == 200, reopened.text
+    assert reopened.json()["status"] == "predicted"
+
+    trail = client.get(f"/audit/studies/{study_id}", headers=headers).json()
+    actions = [e["action"] for e in trail]
+    assert "study.hold" in actions
+    assert "study.reopened" in actions
+    assert "policy.denied" in actions
+    hold = [e for e in trail if e["action"] == "study.hold"][-1]
+    assert hold["payload"]["previous_status"] == "predicted"
+    assert hold["payload"]["new_status"] == "blocked"
+    reopen = [e for e in trail if e["action"] == "study.reopened"][-1]
+    assert reopen["payload"]["previous_status"] == "blocked"
+    assert reopen["payload"]["new_status"] == "predicted"
+    assert reopen["payload"]["prediction_id"] == prediction_id
 
 
 def test_stats_endpoint():
@@ -149,6 +316,34 @@ def test_stats_endpoint():
     assert 0.0 <= stats["divergence_rate"] <= 1.0
     # The corrected review from test_full_workflow should register a divergence.
     assert stats["reviews_with_divergence"] >= 1
+
+
+def test_governance_divergence_report():
+    headers = _auth()
+    report = client.get("/governance/divergence", headers=headers)
+    assert report.status_code == 200, report.text
+    body = report.json()
+    assert body["summary"]["reviews"] >= 1
+    assert body["summary"]["reviewed_findings"] >= 6
+    assert body["summary"]["divergences"] >= 1
+    assert body["summary"]["divergence_rate"] > 0
+    assert body["by_decision"]["corrected"] >= 1
+    assert body["by_finding"]["consolidation"]["divergences"] >= 1
+    assert "dod-rx-cxr-policy-v0.1.0" in body["by_clinical_policy"]
+
+    by_model = client.get(
+        "/governance/divergence?model_version=cxr-densenet-v0.1.0",
+        headers=headers,
+    ).json()
+    assert by_model["filters"]["model_version"] == "cxr-densenet-v0.1.0"
+    assert by_model["summary"]["reviewed_findings"] >= 6
+
+    by_policy = client.get(
+        "/governance/divergence?clinical_policy_version=dod-rx-cxr-policy-v0.1.0",
+        headers=headers,
+    ).json()
+    assert by_policy["filters"]["clinical_policy_version"] == "dod-rx-cxr-policy-v0.1.0"
+    assert list(by_policy["by_clinical_policy"]) == ["dod-rx-cxr-policy-v0.1.0"]
 
 
 def test_dicom_upload_is_deidentified_on_disk():

@@ -26,3 +26,11 @@ def require_reviewer(user: User = Depends(get_current_user)) -> User:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Only a radiologist can review studies")
     return user
+
+
+def require_governance_admin(user: User = Depends(get_current_user)) -> User:
+    """Only governance roles may change clinical policies."""
+    if user.role not in {"admin", "admin_clinical"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only a clinical admin can manage policies")
+    return user
